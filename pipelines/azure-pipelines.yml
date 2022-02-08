@@ -1,0 +1,69 @@
+trigger:
+  branches:
+    include:
+    - main 
+  paths:
+    include:
+    - sprint-00
+  
+
+pool:
+  vmImage: ubuntu-latest
+
+stages: 
+  - stage: Validate
+    jobs:
+      - job: Validate
+        variables:
+          location: 'westeurope'
+          
+        steps:
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'msdn'
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az deployment sub what-if -l $(location) --template-file ./templates/main.bicep --parameters ./templates/parameters.dev.json
+              az deployment sub validate -l $(location) --template-file ./templates/main.bicep --parameters ./templates/parameters.dev.json
+
+  - stage: Deploy_Infra
+    jobs:
+      - job: Deploy_Infra
+        variables:
+          location: 'westeurope'
+        steps:
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'msdn'
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              # Create deployment
+              az deployment sub create -l $(location) --template-file ./templates/main.bicep --parameters ./templates/parameters.dev.json
+
+  - stage: Deploy_App
+    jobs:
+      - job: Deploy_App
+        variables:
+          location: 'westeurope'
+          storage: 'taartt6blps2wc5ogc'
+          cdnendpint: 'taartt6blps2wc5ogc'
+          cdnprofile: 'taartt6blps2wc5ogc'
+          rg: 'taart-rg'
+        steps:
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: 'msdn'
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              # Upload files to storage (web-site content) from ./src folder and purge CDN cached content
+
+              az storage blob upload-batch --account-name $(storage) -s ./src -d '$web'
+              az cdn endpoint purge -g $(rg) -n $(cdnendpint) --profile-name $(cdnprofile) --no-wait --content-paths '/'
+
+              # Output with hostName of the endpoint
+
+              echo "Static website URL is  => `az cdn endpoint list -g $(rg) --profile-name $(cdnprofile) | jq -r ".[].hostName"`"
+
