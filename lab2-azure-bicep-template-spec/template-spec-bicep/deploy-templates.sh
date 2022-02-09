@@ -16,15 +16,14 @@ az group create -n $RESOURCE_GROUP -l $LOCATION
 
 echo "Resource group $RESOURCE_GROUP has been created/updated"
 
-RESPONSE=$(az ts create \
+az ts create \
     --name $TEMPLATE_SPEC \
     --display-name "$TEMPLATE_SPEC_DISPLAY_NAME" \
     --description "$TEMPLATE_SPEC_DESCRIPTION" \
     --version $VERSION \
+    --tags BU=Finance Environment=Production \
     --resource-group $RESOURCE_GROUP \
     --location $LOCATION \
     --template-file "./main.bicep" \
     --yes \
-    --query 'id' -o json)
-    
-echo "Done: $RESPONSE"
+    --query 'id' -o json
