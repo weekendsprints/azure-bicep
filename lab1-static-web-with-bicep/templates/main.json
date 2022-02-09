@@ -1,0 +1,348 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.4.1124.51302",
+      "templateHash": "8781587557285892629"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "resourcePrefix": {
+      "type": "string"
+    },
+    "storagename": {
+      "type": "string",
+      "defaultValue": "[format('{0}{1}', parameters('resourcePrefix'), uniqueString(parameters('resourcePrefix')))]",
+      "maxLength": 24,
+      "minLength": 3,
+      "metadata": {
+        "description": "Unique name of the solution. This must be between 3 and 24"
+      }
+    },
+    "storagecontainername": {
+      "type": "string"
+    },
+    "profileName": {
+      "type": "string",
+      "defaultValue": "[format('{0}{1}', parameters('resourcePrefix'), uniqueString(parameters('resourcePrefix')))]"
+    },
+    "endpointName": {
+      "type": "string",
+      "defaultValue": "[format('{0}{1}', parameters('resourcePrefix'), uniqueString(parameters('resourcePrefix')))]"
+    },
+    "indexDocumentPath": {
+      "type": "string",
+      "metadata": {
+        "description": "The path to the web index document."
+      }
+    },
+    "errorDocument404Path": {
+      "type": "string",
+      "metadata": {
+        "description": "The path to the web error document."
+      }
+    }
+  },
+  "variables": {
+    "resourceGroupName": "[format('{0}-rg', parameters('resourcePrefix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('resourceGroupName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "staticWeb",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storagename": {
+            "value": "[parameters('storagename')]"
+          },
+          "containerName": {
+            "value": "[parameters('storagecontainername')]"
+          },
+          "profileName": {
+            "value": "[parameters('profileName')]"
+          },
+          "endpointName": {
+            "value": "[parameters('endpointName')]"
+          },
+          "indexDocumentPath": {
+            "value": "[parameters('indexDocumentPath')]"
+          },
+          "errorDocument404Path": {
+            "value": "[parameters('errorDocument404Path')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.4.1124.51302",
+              "templateHash": "10771757225114378484"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "storagename": {
+              "type": "string"
+            },
+            "containerName": {
+              "type": "string"
+            },
+            "profileName": {
+              "type": "string"
+            },
+            "endpointName": {
+              "type": "string"
+            },
+            "indexDocumentPath": {
+              "type": "string"
+            },
+            "errorDocument404Path": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2021-02-01",
+              "name": "[parameters('storagename')]",
+              "location": "[parameters('location')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2021-02-01",
+              "name": "[format('{0}/default/{1}', parameters('storagename'), parameters('containerName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storagename'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2018-11-30",
+              "name": "DeploymentScript",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-04-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storagename'))]",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'DeploymentScript'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'DeploymentScript')).principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'DeploymentScript')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storagename'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2020-10-01",
+              "name": "staticwebenable",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'DeploymentScript'))]": {}
+                }
+              },
+              "kind": "AzureCLI",
+              "properties": {
+                "azCliVersion": "2.30.0",
+                "cleanupPreference": "Always",
+                "retentionInterval": "PT4H",
+                "environmentVariables": [
+                  {
+                    "name": "profileName",
+                    "value": "[parameters('profileName')]"
+                  },
+                  {
+                    "name": "endpointName",
+                    "value": "[parameters('endpointName')]"
+                  },
+                  {
+                    "name": "ResourceGroupName",
+                    "value": "[resourceGroup().name]"
+                  },
+                  {
+                    "name": "StorageAccountName",
+                    "value": "[parameters('storagename')]"
+                  },
+                  {
+                    "name": "IndexDocumentPath",
+                    "value": "[parameters('indexDocumentPath')]"
+                  },
+                  {
+                    "name": "ErrorDocument404Path",
+                    "value": "[parameters('errorDocument404Path')]"
+                  }
+                ],
+                "scriptContent": "#/bin/bash -e\n\naz storage blob service-properties update --account-name $StorageAccountName --static-website --404-document $ErrorDocument404Path --index-document $IndexDocumentPath"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'DeploymentScript')]",
+                "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('storagename')), 'Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'DeploymentScript'), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storagename'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "staticWebsiteUrl": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storagename'))).primaryEndpoints.web]"
+            },
+            "storageaccount": {
+              "type": "string",
+              "value": "[parameters('storagename')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('resourceGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "cdn",
+      "resourceGroup": "[variables('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "profileName": {
+            "value": "[parameters('profileName')]"
+          },
+          "endpointName": {
+            "value": "[parameters('endpointName')]"
+          },
+          "storageAccountHostName": {
+            "value": "[replace(replace(reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'staticWeb'), '2020-10-01').outputs.staticWebsiteUrl.value, 'https://', ''), '/', '')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.4.1124.51302",
+              "templateHash": "3696569022563635640"
+            }
+          },
+          "parameters": {
+            "profileName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "endpointName": {
+              "type": "string"
+            },
+            "storageAccountHostName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cdn/profiles",
+              "apiVersion": "2020-09-01",
+              "name": "[parameters('profileName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "displayName": "[parameters('profileName')]"
+              },
+              "sku": {
+                "name": "Standard_Verizon"
+              }
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/endpoints",
+              "apiVersion": "2020-09-01",
+              "name": "[format('{0}/{1}', parameters('profileName'), parameters('endpointName'))]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "displayName": "[parameters('endpointName')]"
+              },
+              "properties": {
+                "originHostHeader": "[parameters('storageAccountHostName')]",
+                "isHttpAllowed": true,
+                "isHttpsAllowed": true,
+                "queryStringCachingBehavior": "IgnoreQueryString",
+                "contentTypesToCompress": [
+                  "text/plain",
+                  "text/html",
+                  "text/css",
+                  "application/x-javascript",
+                  "text/javascript"
+                ],
+                "isCompressionEnabled": true,
+                "origins": [
+                  {
+                    "name": "origin1",
+                    "properties": {
+                      "hostName": "[parameters('storageAccountHostName')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('profileName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "hostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('profileName'), parameters('endpointName'))).hostName]"
+            },
+            "originHostHeader": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('profileName'), parameters('endpointName'))).originHostHeader]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('resourceGroupName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'staticWeb')]"
+      ]
+    }
+  ]
+}
