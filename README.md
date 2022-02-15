@@ -4,4 +4,5 @@ This repository contains different material to practise with [Azure Bicep](https
 
 Table of Contents
 
-* LAB1 - Static Website with Azure Bicep and Azure DevOps
+1. [LAB1 - Static Website with Azure Bicep and Azure DevOps](lab1-static-web-with-bicep/README.md)
+2. [LAB2 - Azure resource governance with project Bicep and Template Specs](lab2-azure-bicep-template-spec/README.md)

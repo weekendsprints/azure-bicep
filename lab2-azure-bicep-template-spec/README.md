@@ -1,5 +1,7 @@
 # Azure Resource Governance with Bicep
 
+This repository folder contains material for the article - [Azure resource governance with project Bicep and Template Specs](https://erudinsky.com/2022/01/14/azure-resource-governance-with-project-bicep-and-template-specs/)
+
 This folder includes 
 
 ```bash 

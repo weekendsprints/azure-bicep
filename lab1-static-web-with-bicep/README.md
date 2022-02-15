@@ -2,6 +2,8 @@
 
 This repository contains *static web site sample*, *azure bicep template* with deployment script and example of *azure devops pipeline* definition.
 
+This repository folder contains material for the article - [Static web site on Azure with Azure DevOps and Bicep](https://erudinsky.com/2022/01/07/static-web-site-on-azure-with-azure-devops-and-bicep/)
+
 The end goal is to set the following process: 
 
 ![Deploy static website using Azure Bicep](images/azure-static-web-site-schema.png)
